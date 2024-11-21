@@ -80,10 +80,10 @@ spectra_wavelengths_long <- substr(unlist(lapply(str_split(spectra_wavelengths_m
                                                  function(str_list){
                                                    return(str_list[[1]])})), 
                                    2,1000)
-#    Get the datestamp and numeric index of each spectrum
+#    Get the wavelengths for spectra
 spectra_wavelengths <- substr(spectra_wavelengths_long, 
                               1, 
-                              ((nchar(spectra_wavelengths_long))-5))
+                              ((nchar(spectra_wavelengths_long))-1))
 
 # ************* Filtering Bad Spectra ************* 
 
@@ -145,17 +145,20 @@ output_library[output_library > 1] <- 1
 # Write new library data file to disk
 #    Create ENVI file format and MESMA (Dar's) file format
 terra::writeRaster(output_library, paste(output_filepath, "/AZ_spectral_library", sep=""), filetype="ENVI", overwrite=TRUE)
-file.rename(paste(output_filepath, "/AZ_spectral_library", sep=""), paste(output_filepath, "/AZ_spectral_library.sli", sep=""))
+# Create a copy of the original ENVI file in .sli format for Viper Tools
+file.copy(paste(output_filepath, "/AZ_spectral_library", sep=""), paste(output_filepath, "/AZ_spectral_library_sli.sli", sep=""), overwrite=TRUE)
+file.copy(paste(output_filepath, "/AZ_spectral_library.hdr", sep=""), paste(output_filepath, "/AZ_spectral_library_sli.hdr", sep=""), overwrite=TRUE)
+
 
 # Create metadata file for ViperTools
 output_metadata <- input_metadata_retained %>%
   mutate(Name = paste(output_spectrum_name_prefix, year, "_", month, "_", day, "_", name, sep="")) %>%
   dplyr::select(Name, class, subclass, life_history, binomial, subject, photograph)
-write_csv(output_metadata, paste(output_filepath, "/AZ_spectral_library.csv", sep=""))
+write_csv(output_metadata, paste(output_filepath, "/AZ_spectral_library_sli.csv", sep=""))
 
 # Add spectra names to header file (.hdr)
 #    Read auto-generated header 
-output_header <- readLines(paste(output_filepath, "/AZ_spectral_library.hdr", sep=""))
+output_header <- readLines(paste(output_filepath, "/AZ_spectral_library_sli.hdr", sep=""))
 #    Generate well-formatted list of spectra names for output
 spectra_names_lines <- paste("spectra names = {\n", paste(output_metadata$Name, collapse=', \n'), "}", sep="")
 spectra_wavelengths_lines <- paste("wavelength = {\n", paste(spectra_wavelengths, collapse=', \n'), "}", sep="")
@@ -169,7 +172,7 @@ output_header <- c(output_header,
                    spectra_wavelengths_lines)
 #    Add list of spectra names to end of text file and write to disk
 writeLines(output_header, 
-           paste(output_filepath, "/AZ_spectral_library.hdr", sep=""))
+           paste(output_filepath, "/AZ_spectral_library_sli.hdr", sep=""))
 
 
 
