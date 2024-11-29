@@ -9,6 +9,7 @@
 library(terra)
 library(tidyverse)
 library(janitor)
+library(ncdf4)
 
 # ************* User Settings ************* 
 # Filepaths 
@@ -130,7 +131,7 @@ output_library <- terra::rast((as.matrix(asd_library, wide=TRUE)) %*% t(emit_wei
 
 # Write new library data file to disk
 #    Create ENVI file format and MESMA (Dar's) file format
-terra::writeRaster(output_library, filename=output_spectrum_path, filetype="ENVI")
+terra::writeRaster(output_library, filename=output_spectrum_path, filetype="ENVI", overwrite=TRUE)
 # Create a copy of the original ENVI file in .sli format for Viper Tools
 file.copy(output_spectrum_path, 
           paste(output_spectrum_path, "_sli.sli", sep=""), 
@@ -156,10 +157,15 @@ spectra_wavelengths_lines <- paste("wavelength = {\n", paste(emit_wavelengths, c
 output_header[8] <- "file type = ENVI Spectral Library"
 output_header[12] <- "sensor_type = Unknown"
 output_header[15] <- "wavelength units = Micrometers"
+# NOTE for some reason BBL in ENVI are formatted with 0 for 'bad' and 1 for 'good' 
+bad_bands <- rep(1, 285)
+bad_bands[c(1:10, 131:141, 189:220, 280:285)] <- 0
+bbl <- paste("bbl = {\n", paste(bad_bands, collapse=","), "}\n", sep="")
 #    Add band names and wavelengths to header file
 output_header <- c(output_header, 
                    spectra_names_lines,
-                   spectra_wavelengths_lines)
+                   spectra_wavelengths_lines,
+                   bbl)
 #    Add list of spectra names to end of text file and write to disk
 writeLines(output_header, 
            paste(output_spectrum_path, "_sli.hdr", sep=""))
